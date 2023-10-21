@@ -223,6 +223,17 @@ void loop() {
 		bool left_eye  = new_price >= price;
 		bool right_eye = new_price >  price;
 
+		uint16_t l_fade_from = digitalRead(D1) ? 1023 : 0;
+		uint16_t r_fade_from = digitalRead(D2) ? 1023 : 0;
+		uint16_t l_fade_to   = left_eye  ? 1023 : 0;
+		uint16_t r_fade_to   = right_eye ? 1023 : 0;
+
+		for(int i=0; i<1024; i++) {
+			analogWrite(D1, l_fade_from + double(l_fade_to - l_fade_from) * i / 1023);
+			analogWrite(D2, r_fade_from + double(r_fade_to - r_fade_from) * i / 1023);
+			delay(1);
+		}
+
 		digitalWrite(D1, left_eye);
 		digitalWrite(D2, right_eye);
 
