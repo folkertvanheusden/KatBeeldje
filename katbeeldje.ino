@@ -17,9 +17,7 @@ const char name[] = "KatBeeldje";
 WiFiClient   wclient;
 PubSubClient client(wclient);
 
-double price     = 0;
-double new_price = 0;
-bool   updated   = false;
+bool updated = false;
 
 void callback(const char topic[], byte *payload, unsigned int len) {
 	Serial.println(topic);
@@ -27,9 +25,7 @@ void callback(const char topic[], byte *payload, unsigned int len) {
 	if (!payload || len == 0)
 		return;
 
-	std::string pls(reinterpret_cast<const char *>(payload), len);  // workaround for not 0x00-terminated payload
-	new_price = atoi(pls.c_str());
-	printf("new price: %.2f\r\n", new_price);
+	// TODO: check rxpk or txpk?
 
 	updated = true;
 }
@@ -71,7 +67,7 @@ void MQTT_connect() {
 
 		Serial.println(F("MQTT Connected!"));
 
-		if (client.subscribe("vanheusden/bitcoin/bitstamp_usd") == false)
+		if (client.subscribe("ttn/revspace/traffic") == false)
 			Serial.println("subscribe failed");
 		else
 			Serial.println("subscribed");
@@ -148,7 +144,6 @@ retry:
 	printf("connect\r\n");
 
 	auto state = try_connect_init(cw.get_targets(), available_access_points, 300, progress_indicator);
-
 	connect_status_t cs = CS_IDLE;
 
 	for(;;) {
@@ -212,6 +207,8 @@ void setup() {
 	client.setCallback(callback);
 }
 
+unsigned long when = 0;
+
 void loop() {
 	digitalWrite(LED_BUILTIN, !!(millis() & 512));
 
@@ -219,28 +216,30 @@ void loop() {
 
 	MQTT_connect();
 
+	unsigned long now = millis();
+
 	if (updated) {
-		Serial.println(millis());
-
-		bool left_eye  = new_price >= price;
-		bool right_eye = new_price >  price;
-
-		uint16_t l_fade_from = digitalRead(D1) ? 1023 : 0;
-		uint16_t r_fade_from = digitalRead(D2) ? 1023 : 0;
-		uint16_t l_fade_to   = left_eye  ? 1023 : 0;
-		uint16_t r_fade_to   = right_eye ? 1023 : 0;
-
-		for(int i=0; i<1024; i++) {
-			analogWrite(D1, l_fade_from + double(l_fade_to - l_fade_from) * i / 1023);
-			analogWrite(D2, r_fade_from + double(r_fade_to - r_fade_from) * i / 1023);
-			delay(1);
-		}
-
-		digitalWrite(D1, left_eye);
-		digitalWrite(D2, right_eye);
-
-		price = new_price;
-
 		updated = false;
+
+		when = now;
+
+		analogWrite(D1, 1023);
+		analogWrite(D2, 1023);
+	}
+
+	if (when) {
+		uint16_t l_fade_from = 1023;  // TODO: left eye rx pkts, right eye tx pkts
+		uint16_t r_fade_from = 1023;
+		uint16_t l_fade_to   = 0;
+		uint16_t r_fade_to   = 0;
+
+		int16_t distance = now - when;
+
+		if (distance >= 1024)
+			when = 0;
+		else {
+			analogWrite(D1, l_fade_from + double(l_fade_to - l_fade_from) * distance / 1023);
+			analogWrite(D2, r_fade_from + double(r_fade_to - r_fade_from) * distance / 1023);
+		}
 	}
 }
