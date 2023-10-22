@@ -222,9 +222,6 @@ void loop() {
 		updated = false;
 
 		when = now;
-
-		analogWrite(D1, 1023);
-		analogWrite(D2, 1023);
 	}
 
 	if (when) {
