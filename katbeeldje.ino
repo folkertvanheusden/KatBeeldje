@@ -12,7 +12,9 @@
 
 #include <ESP8266mDNS.h>
 
-WiFiClient wclient;
+const char name[] = "KatBeeldje";
+
+WiFiClient   wclient;
 PubSubClient client(wclient);
 
 double price     = 0;
@@ -26,9 +28,7 @@ void callback(const char topic[], byte *payload, unsigned int len) {
 		return;
 
 	std::string pls(reinterpret_cast<const char *>(payload), len);  // workaround for not 0x00-terminated payload
-
 	new_price = atoi(pls.c_str());
-
 	printf("new price: %.2f\r\n", new_price);
 
 	updated = true;
@@ -37,8 +37,8 @@ void callback(const char topic[], byte *payload, unsigned int len) {
 bool progress_indicator(const int nr, const int mx, const std::string & which) {
 	printf("%3.2f%%: %s\r\n", nr * 100. / mx, which.c_str());
 
-	digitalWrite(D1, !analogRead(D1));
-	digitalWrite(D2, !analogRead(D2));
+	digitalWrite(D1, !digitalRead(D1));
+	digitalWrite(D2, !digitalRead(D2));
 
 	return true;
 }
@@ -46,8 +46,11 @@ bool progress_indicator(const int nr, const int mx, const std::string & which) {
 void reboot() {
 	Serial.println(F("Reboot"));
 	Serial.flush();
+
 	delay(100);
+
 	ESP.restart();
+
 	delay(1000);
 }
 
@@ -58,7 +61,7 @@ void MQTT_connect() {
 		while (!client.connected()) {
 			Serial.println("Attempting MQTT connection... ");
 
-			if (client.connect("KatBeeldje")) {
+			if (client.connect(name)) {
 				Serial.println(F("Connected"));
 				break;
 			}
@@ -79,7 +82,7 @@ void MQTT_connect() {
 
 void enableOTA() {
 	ArduinoOTA.setPort(8266);
-	ArduinoOTA.setHostname("KatBeeldje");
+	ArduinoOTA.setHostname(name);
 	ArduinoOTA.setPassword("iojasdsjiasd");
 
 	ArduinoOTA.onStart([]() {
@@ -105,7 +108,7 @@ void enableOTA() {
 }
 
 void setup_wifi() {
-	set_hostname("KatBeeldje");
+	set_hostname(name);
 
 	enable_wifi_debug();
 
@@ -118,7 +121,7 @@ void setup_wifi() {
 
 	if (cw.is_configured() == false) {
 retry:
-		start_wifi("KatBeeldje");  // enable wifi with AP (empty string for no AP)
+		start_wifi(name);  // enable wifi with AP (empty string for no AP)
 
 		digitalWrite(D1, HIGH);
 		digitalWrite(D2, HIGH);
@@ -178,13 +181,12 @@ retry:
 
 	enableOTA();
 
-	if (!MDNS.begin("KatBeeldje"))
+	if (!MDNS.begin(name))
 		Serial.println(F("Error setting up MDNS responder!"));
 }
 
 void setup() {
 	Serial.begin(115200);
-
 	Serial.setDebugOutput(true);
 
 	Serial.println(F("Init"));
