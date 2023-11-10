@@ -67,7 +67,7 @@ void MQTT_connect() {
 
 		Serial.println(F("MQTT Connected!"));
 
-		if (client.subscribe("ttn/revspace/traffic") == false)
+		if (client.subscribe("lorawan/uplink") == false)
 			Serial.println("subscribe failed");
 		else
 			Serial.println("subscribed");
